@@ -18,6 +18,7 @@
 @implementation RNDocumentPicker {
     NSMutableArray *composeViews;
     NSMutableArray *composeCallbacks;
+    NSMutableArray *composeOptions;
 }
 
 @synthesize bridge = _bridge;
@@ -27,6 +28,7 @@
     if ((self = [super init])) {
         composeCallbacks = [[NSMutableArray alloc] init];
         composeViews = [[NSMutableArray alloc] init];
+        composeOptions = [[NSMutableArray alloc] init];
     }
     return self;
 }
@@ -45,7 +47,7 @@ RCT_EXPORT_METHOD(show:(NSDictionary *)options
     UIDocumentMenuViewController *documentPicker = [[UIDocumentMenuViewController alloc] initWithDocumentTypes:(NSArray *)allowedUTIs inMode:UIDocumentPickerModeImport];
 
     [composeCallbacks addObject:callback];
-
+    [composeOptions addObject:options];
 
     documentPicker.delegate = self;
     documentPicker.modalPresentationStyle = UIModalPresentationFormSheet;
@@ -88,6 +90,9 @@ RCT_EXPORT_METHOD(show:(NSDictionary *)options
         RCTResponseSenderBlock callback = [composeCallbacks lastObject];
         [composeCallbacks removeLastObject];
 
+        NSDictionary* options = [composeOptions lastObject];
+        [composeOptions removeLastObject];
+
         [url startAccessingSecurityScopedResource];
 
         NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] init];
@@ -105,6 +110,11 @@ RCT_EXPORT_METHOD(show:(NSDictionary *)options
                 [result setValue:[fileAttributes objectForKey:NSFileSize] forKey:@"fileSize"];
             } else {
                 NSLog(@"%@", attributesError);
+            }
+
+            if([options valueForKey:@"toURL"] != nil) {
+                [[NSFileManager defaultManager] copyItemAtURL:url toURL:[NSURL fileURLWithPath:options[@"toURL"]] error:&attributesError];
+                [result setValue:options[@"toURL"] forKey:@"uri"];
             }
 
             callback(@[[NSNull null], result]);
